@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Sasha's Aquarium</title>
+
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://fishtank1.netlify.app/">
+    <meta property="og:title" content="Sasha's Virtual Aquarium">
+    <meta property="og:description" content="A special 3D aquarium built just for you.">
+    <meta property="og:image" content="https://fishtank1.netlify.app/assets/bg.jpg">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+
+    <style>
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            background-color: #001e36;
+            background-image: url('assets/bg.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            transition: filter 0.5s;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #partyBtn {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid white;
+            color: #333;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-family: sans-serif;
+            font-weight: bold;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+            font-size: 16px;
+            transition: all 0.3s ease;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+
+<body>
+    <button id="partyBtn">🪩 Party Mode</button>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // 1. Setup Scene
+        const scene = new THREE.Scene();
+        // Fog is essential for depth, but we'll tweak it in Rave Mode
+        const chillFog = new THREE.Fog(0x001e36, 10, 25);
+        scene.fog = chillFog;
+
+        // 2. Camera
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 2, 9);
+
+        // 3. Renderer
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+        document.body.appendChild(renderer.domElement);
+
+        // --- STANDARD LIGHTING ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
+        scene.add(ambientLight);
+        const topLight = new THREE.DirectionalLight(0xffffff, 3);
+        topLight.position.set(5, 10, 7);
+        scene.add(topLight);
+        const frontLight = new THREE.DirectionalLight(0xffffff, 1);
+        frontLight.position.set(0, 0, 10);
+        scene.add(frontLight);
+
+        // --- RAVE RIG ---
+        const raveGroup = new THREE.Group();
+        scene.add(raveGroup);
+        raveGroup.visible = false;
+
+        // A. DISCO BALL
+        const discoBallGeo = new THREE.SphereGeometry(1.5, 32, 32);
+        // Create a mirror-like material
+        const discoBallMat = new THREE.MeshPhysicalMaterial({
+            color: 0xffffff,
+            roughness: 0.0,
+            metalness: 1.0,
+            reflectivity: 1.0,
+            clearcoat: 1.0,
+            emissive: 0x111111, // Low emissive just in case
+            envMapIntensity: 5.0 // SUPER BRIGHT REFLECTIONS
+        });
+        const discoBall = new THREE.Mesh(discoBallGeo, discoBallMat);
+        discoBall.position.set(0, 8, 0); // Top center
+        raveGroup.add(discoBall);
+
+        // B. COLORFUL FILL LIGHTS (So it's not pitch black)
+        // Two hemisphere lights to bathe the scene in neon colors
+        const raveHemi = new THREE.HemisphereLight(0xff00ff, 0x00ffff, 0.8);
+        raveGroup.add(raveHemi);
+
+        // C. SPOTLIGHTS (Pointing at Disco Ball)
+        // INCREASED INTENSITY greatly and angle
+        function createSpotLight(color, xPos, zPos) {
+            const spot = new THREE.SpotLight(color, 2000); // 500 -> 2000
+            spot.angle = 0.8; // Wider angle
+            spot.penumbra = 0.5; // Softer edge
+            spot.position.set(xPos, 5, zPos);
+            spot.target = discoBall;
+            raveGroup.add(spot);
+
+            // Add a point light at the ball location to fake the "glow" of the ball itself hitting others
+            const point = new THREE.PointLight(color, 10, 20);
+            point.position.copy(discoBall.position);
+            raveGroup.add(point);
+
+            return spot;
+        }
+
+        const spot1 = createSpotLight(0xff00ff, -10, 10); // Magenta
+        const spot2 = createSpotLight(0x00ffff, 10, 10);  // Cyan
+        const spot3 = createSpotLight(0xffff00, 0, -10);  // Yellow
+
+        // D. SUPER STROBE
+        const strobeLight = new THREE.DirectionalLight(0xffffff, 0);
+        strobeLight.position.set(0, 0, 20);
+        raveGroup.add(strobeLight);
+
+        // --- MATERIALS ---
+
+        // 1. Rave Fish Skin: "Liquid Silver"
+        // Pure chrome reflection, no heavy colored glow
+        const raveMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0xffffff,
+            metalness: 1.0,
+            roughness: 0.05,
+            ior: 2.5,
+            reflectivity: 1.0,
+            clearcoat: 1.0,
+            clearcoatRoughness: 0.0,
+            emissive: 0x222244, // Very faint cool backing
+            emissiveIntensity: 0.2 // Just enough to not be black in shadows
+        });
+        raveMaterial.envMapIntensity = 3.0; // High reflection
+
+        // Environment map: Fallback to local background for robust reflections
+        const pmremGenerator = new THREE.PMREMGenerator(renderer);
+        pmremGenerator.compileEquirectangularShader();
+
+        new THREE.TextureLoader().load('assets/bg.jpg', function (texture) {
+            texture.mapping = THREE.EquirectangularReflectionMapping;
+            texture.colorSpace = THREE.SRGBColorSpace;
+
+            // Assign to materials
+            raveMaterial.envMap = texture;
+            discoBallMat.envMap = texture;
+
+            // Set global environment so everything metals reflects it
+            scene.environment = texture;
+
+            // Force updates
+            raveMaterial.needsUpdate = true;
+            discoBallMat.needsUpdate = true;
+        });
+
+        // 2. Eye Lasers: "Neon Beams"
+        const laserMaterial = new THREE.MeshBasicMaterial({
+            color: 0x00ff00,
+            transparent: true,
+            opacity: 0.8,
+            blending: THREE.AdditiveBlending,
+            fog: false, // <--- THE FIX for "dark brown lines"
+            side: THREE.DoubleSide
+        });
+
+        // 3. Glowing Eyes
+        const eyeGlowMaterial = new THREE.MeshBasicMaterial({
+            color: 0x00ff00,
+            fog: false // Always bright
+        });
+
+        // --- 5. PARTICLES ---
+        const particlesGeometry = new THREE.BufferGeometry();
+        const particlesCount = 1000;
+        const posArray = new Float32Array(particlesCount * 3);
+        for (let i = 0; i < particlesCount * 3; i++) {
+            posArray[i] = (Math.random() - 0.5) * 30;
+        }
+        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        const particlesMaterial = new THREE.PointsMaterial({
+            size: 0.05, color: 0xffffff, transparent: true, opacity: 0.6
+        });
+        const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+        scene.add(particlesMesh);
+
+        // --- 6. FISH SYSTEM ---
+        const loader = new GLTFLoader();
+        const fishSchool = [];
+        const raveSquad = [];
+        const mixers = []; // Animation Mixers
+
+        function addFish(fileName, scale, speed, timeOffset, yOffset, isRaveOnly = false) {
+            loader.load(`assets/${fileName}`, function (gltf) {
+                const fish = gltf.scene;
+                fish.scale.set(scale, scale, scale);
+
+                const box = new THREE.Box3().setFromObject(fish);
+                const size = box.getSize(new THREE.Vector3());
+                const center = box.getCenter(new THREE.Vector3());
+                fish.position.sub(center);
+
+                // Fix for dark Ronanseahorse model
+                if (fileName === 'ronanseahorse.glb') {
+                    fish.traverse((child) => {
+                        if (child.isMesh) {
+                            child.material.envMapIntensity = 2.0; // Boost reflections
+                            child.material.emissiveIntensity = 0.5; // Bump emissive
+                            // Ensure it has some emissive color to react to intensity if it was black
+                            if (child.material.emissive && child.material.emissive.getHex() === 0) {
+                                child.material.emissive.setHex(0x111111);
+                            }
+                        }
+                    });
+                }
+
+                // Initialize visibility
+                if (isRaveOnly) {
+                    fish.visible = false;
+                    raveSquad.push(fish);
+                } else {
+                    fishSchool.push(fish);
+                }
+                scene.add(fish);
+
+                // Store animation data on the object itself
+                fish.userData = {
+                    speed: speed,
+                    offset: timeOffset,
+                    yBase: yOffset,
+                    isRaveOnly: isRaveOnly,
+                    originalMaterial: null, // Placeholder
+                    type: fileName // Store type for animation logic
+                };
+
+                // FIX FOR STATIC SASHA: Rotate to swimming position (Superman / Scuba pose)
+                // If she is T-Posing upright, rotating -90 on X usually puts her flat.
+                if (fileName === 'sashtpost.glb') {
+                    fish.rotation.x = -Math.PI / 2; // Flat on stomach
+                    fish.rotation.z = Math.PI; // Face forward if needed (depends on model axis)
+
+                    // Store initial rotation to animate relative to it
+                    fish.userData.baseRotation = { x: -Math.PI / 2, y: 0, z: Math.PI };
+                }
+
+                // ANIMATION CHECK
+                if (gltf.animations && gltf.animations.length > 0) {
+                    console.log(`Animations found for ${fileName}:`, gltf.animations.map(a => a.name));
+                    const mixer = new THREE.AnimationMixer(fish);
+
+                    // Play the first animation found
+                    const action = mixer.clipAction(gltf.animations[0]);
+                    action.play();
+                    mixers.push(mixer);
+                } else {
+                    console.warn(`No animations found for ${fileName}`);
+                    if (fileName.includes('sasha')) {
+                        // Optional: Rotate arms if static? Hard with skinned mesh.
+                        // For now just warn.
+                    }
+                }
+
+            }, undefined, function (error) {
+                console.error(`Could not load ${fileName}:`, error);
+            });
+        }
+
+        // ============================================
+        // 🐠 FISH ROLL CALL
+        // ============================================
+        addFish('shark.glb', 1.8, 0.45, 2, 2.0); // 0.9 -> 0.45
+        addFish('manta.glb', 2.5, 0.1, 3, -3.5); // 0.2 -> 0.1
+        addFish('cuttlefish.glb', 1.2, 0.17, 5, -1.0); // 0.35 -> 0.17
+        addFish('tetra.glb', 1.0, 0.55, 0, 0.0); // 1.1 -> 0.55
+        addFish('tetra.glb', 0.9, 0.6, 0.5, 0.5); // 1.2 -> 0.6
+        addFish('tetra.glb', 1.1, 0.5, 1.0, -0.5); // 1.0 -> 0.5
+        addFish('tetra.glb', 0.8, 0.65, 2.0, 0.2); // 1.3 -> 0.65
+        addFish('tetra.glb', 1.0, 0.55, 4.0, -0.2); // 1.1 -> 0.55
+        addFish('squirrelfish.glb', 1.5, 0.25, 0, -2.0); // 0.5 -> 0.25
+        addFish('squirrelfish.glb', 1.4, 0.3, 2, -1.5); // 0.6 -> 0.3
+        addFish('squirrelfish.glb', 1.6, 0.2, 4, -2.5); // 0.4 -> 0.2
+        addFish('angelfish.glb', 1.3, 0.15, 1, -0.5); // 0.3 -> 0.15
+        addFish('angelfish.glb', 1.2, 0.16, 2.5, -0.8);
+
+        // ADD RONAN HERE:
+        addFish('ronanseahorse.glb', 0.25, 0.3, 1.5, -1.0);
+
+        // ADD SASHA SCUBA HERE:
+        // Using sashtpost.glb as identified in assets
+        // Scale 1.5, speed 0.2 (slow swimmer), offset 0
+        addFish('sashtpost.glb', 1.5, 0.2, 0, 0.5);
+
+        // ADD LINGUINIII HERE:
+        addFish('linguiniii.glb', 1.0, 0.3, 3, 1.5);
+
+        // --- RAVE SQUAD (Extra Fish) ---
+        // 2 Cuttlefish
+        for (let i = 0; i < 2; i++) {
+            addFish('cuttlefish.glb', 1.0 + Math.random() * 0.5, 0.2 + Math.random() * 0.1, Math.random() * 10, (Math.random() - 0.5) * 5, true);
+        }
+        // 4 Sharks (because they are cool)
+        for (let i = 0; i < 4; i++) {
+            addFish('shark.glb', 1.5 + Math.random() * 0.5, 0.4 + Math.random() * 0.2, Math.random() * 10, (Math.random() - 0.5) * 5, true);
+        }
+        // 5 Squirrelfish
+        for (let i = 0; i < 5; i++) {
+            addFish('squirrelfish.glb', 1.2 + Math.random() * 0.4, 0.2 + Math.random() * 0.1, Math.random() * 10, (Math.random() - 0.5) * 5, true);
+        }
+
+        // ============================================
+        // 🎛️ MODE SWITCHING
+        // ============================================
+        let isPartyMode = false;
+        const btn = document.getElementById('partyBtn');
+
+        btn.addEventListener('click', () => {
+            isPartyMode = !isPartyMode;
+
+            if (isPartyMode) {
+                // --- START THE RAVE ---
+                btn.innerText = "🛑 Chill Mode";
+                btn.style.background = "rgba(255, 0, 100, 1.0)";
+                btn.style.color = "white";
+
+                // 2. Purple Haze Fog for atmosphere
+                scene.fog = new THREE.Fog(0x220033, 10, 40);
+
+                // 4. Activate Rave Rig
+                raveGroup.visible = true;
+
+                // 5. Swap Skins & Show Rave Squad
+                const allFish = [...fishSchool, ...raveSquad];
+                allFish.forEach(fish => {
+                    if (fish.userData.isRaveOnly) fish.visible = true; // SHOW THE SQUAD
+
+                    fish.traverse((child) => {
+                        if (child.isMesh) {
+                            if (!child.userData.originalMaterial) {
+                                child.userData.originalMaterial = child.material;
+                            }
+                            // Clone material to give each fish a unique neon color
+                            const myRaveMat = raveMaterial.clone();
+
+                            // 1. Diverse Palette: Randomize Hue, Saturation, and Lightness
+                            const hue = Math.random();
+                            const sat = 0.6 + Math.random() * 0.4; // 60% - 100% Saturation
+                            const light = 0.3 + Math.random() * 0.4; // 30% - 70% Lightness
+
+                            myRaveMat.color.setHSL(hue, sat, light);
+
+                            // 2. Defined Features:
+                            myRaveMat.emissive.setHSL(hue, 1.0, 0.1);
+                            myRaveMat.roughness = 0.05 + Math.random() * 0.25;
+
+                            child.material = myRaveMat;
+                        }
+                    });
+                });
+
+            } else {
+                // --- END THE RAVE ---
+                btn.innerText = "🪩 Party Mode";
+                btn.style.background = "rgba(255, 255, 255, 0.9)";
+                btn.style.color = "#333";
+
+                document.body.style.filter = "none";
+                scene.fog = chillFog; // Restore original fog
+
+                ambientLight.intensity = 1.5;
+                topLight.intensity = 3;
+                frontLight.intensity = 1;
+
+                raveGroup.visible = false;
+
+                const allFish = [...fishSchool, ...raveSquad];
+                allFish.forEach(fish => {
+                    if (fish.userData.isRaveOnly) fish.visible = false; // HIDE THE SQUAD
+
+                    fish.traverse((child) => {
+                        if (child.isMesh && child.userData.originalMaterial) {
+                            child.material = child.userData.originalMaterial;
+                        }
+                    });
+                });
+            }
+        });
+
+        // 7. Animation Loop
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta(); // Time since last frame
+            const masterTime = clock.getElapsedTime();
+
+            // Update Animations
+            mixers.forEach(mixer => mixer.update(delta));
+
+            if (isPartyMode) {
+                // A. DISCO BALL ROTATION
+                discoBall.rotation.y += 0.05;
+                discoBall.rotation.z = Math.sin(masterTime) * 0.2;
+
+                // C. SPARKLE PARTICLES
+                particlesMaterial.opacity = 0.5 + Math.sin(masterTime * 20) * 0.3;
+                particlesMaterial.size = 0.08 + Math.sin(masterTime * 10) * 0.03;
+            }
+
+            // Standard Fish & Particle Animation
+            particlesMesh.rotation.y = masterTime * 0.05;
+            particlesMesh.position.y = Math.sin(masterTime * 0.2) * 0.5;
+
+            const allFish = [...fishSchool, ...raveSquad];
+            allFish.forEach(fish => {
+                if (!fish.visible) return; // Don't animate hidden squad members
+
+                const data = fish.userData;
+
+                // --- SPECIAL SEAHORSE LOGIC ---
+                if (data.type === 'ronanseahorse.glb') {
+                    // 1. Slow Forward Movement
+                    const time = (masterTime * data.speed) + data.offset;
+                    const nextT = time + 0.1;
+
+                    // 2. Movement Pattern: Wider, slower circles or figure-8s
+                    const x = Math.sin(time) * 4.0;
+                    const z = Math.cos(time * 0.8) * 3.0;
+
+                    // 3. Vertical Bobbing
+                    const bob = Math.sin(masterTime * 2.0) * 0.5;
+                    const y = data.yBase + bob;
+
+                    const nextX = Math.sin(nextT) * 4.0;
+                    const nextZ = Math.cos(nextT * 0.8) * 3.0;
+                    const nextY = y;
+
+                    fish.position.set(x, y, z);
+                    fish.lookAt(nextX, nextY, nextZ);
+
+                } else if (data.type === 'sashtpost.glb') {
+                    // --- STATIC SASHA "SCUBA" LOGIC ---
+                    // 1. Basic Swim Path (similar to fish but slower)
+                    const time = (masterTime * data.speed) + data.offset;
+                    const nextT = time + 0.1;
+
+                    const x = Math.sin(time) * 5.0; // Medium radius
+                    const z = Math.cos(time * 0.5) * 2.0;
+                    const y = data.yBase + Math.sin(masterTime * 0.5) * 0.2; // Gentle depth change
+
+                    const nextX = Math.sin(nextT) * 5.0;
+                    const nextZ = Math.cos(nextT * 0.5) * 2.0;
+                    const nextY = y;
+
+                    // Move Container
+                    fish.position.set(x, y, z);
+
+                    // Look where we are going
+                    fish.lookAt(nextX, nextY, nextZ);
+
+                    // PROCEDURAL "SWIM" WOBBLE
+                    // Since we rotated her internally, we need to apply animations carefully.
+                    // Actually, lookAt overrides rotation. 
+                    // To combine lookAt + internal rotation, we usually use a nested Group/Object structure.
+                    // But here, let's just cheat and add the wobble to the existing rotation AFTER lookAt.
+
+                    // Re-apply the base orientation because lookAt resets it to "Forward = -Z"
+                    // If T-Pose model's "Forward" is Z (face), and "Up" is Y (Head)...
+                    // lookAt expects that axes.
+
+                    // If she is T-Posing:
+                    // We need to Rotate X by -90 *after* the lookAt to make her prone.
+                    fish.rotateX(-Math.PI / 2);
+
+                    // Add Swim Roll (Rolling shoulders side to side)
+                    fish.rotateZ(Math.sin(masterTime * 2) * 0.1);
+
+                    // Add Swim Pitch (Dipping head slightly)
+                    fish.rotateX(Math.sin(masterTime * 1.5) * 0.05);
+
+                } else {
+                    // --- STANDARD FISH LOGIC ---
+                    const time = (masterTime * data.speed) + data.offset;
+                    const nextT = time + 0.1;
+
+                    const x = Math.sin(time) * 7.0;
+                    const z = Math.sin(time * 2) * 4.5;
+                    const y = Math.sin(time * 1.5) * 1.0 + data.yBase;
+
+                    const nextX = Math.sin(nextT) * 7.0;
+                    const nextZ = Math.sin(nextT * 2) * 4.5;
+                    const nextY = Math.sin(nextT * 1.5) * 1.0 + data.yBase;
+
+                    fish.position.set(x, y, z);
+                    fish.lookAt(nextX, nextY, nextZ);
+                }
+            });
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.minDistance = 5;
+        controls.maxDistance = 15;
+        controls.maxPolarAngle = Math.PI / 2 - 0.1;
+        controls.enablePan = false;
+
+        function adjustCameraForMobile() {
+            const aspect = window.innerWidth / window.innerHeight;
+            camera.aspect = aspect;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+
+            if (aspect < 1) {
+                camera.position.z = 14;
+            } else {
+                camera.position.z = 9;
+            }
+        }
+        adjustCameraForMobile();
+        window.addEventListener('resize', adjustCameraForMobile);
+
+        animate();
+    </script>
+</body>
+
+</html>

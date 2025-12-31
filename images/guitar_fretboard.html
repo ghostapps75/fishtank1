@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FPV Guitar Fretboard</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --fretboard-wood: #3e2723;
+            --fret-color: #cfd8dc;
+            --marker-color: #f0f0f0;
+            --marker-dbl-color: #f0f0f0;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            font-family: sans-serif;
+        }
+
+        #app-container {
+            width: 95vw;
+            height: 90vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+            background: #1e1e1e;
+            border-radius: 20px;
+            padding: 20px;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+            max-height: 600px;
+            filter: drop-shadow(10px 10px 20px rgba(0, 0, 0, 0.8));
+        }
+
+        .finger-group {
+            transition: transform 0.15s cubic-bezier(0.25, 0.1, 0.25, 1);
+            transform-origin: center;
+        }
+
+        .string-active {
+            stroke-width: 15px !important;
+            filter: drop-shadow(0 0 10px white);
+            transition: all 0.05s ease;
+        }
+
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 100;
+            border: 1px solid #444;
+            max-width: 600px;
+            width: 90%;
+            align-items: center;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #555;
+        }
+
+        textarea {
+            width: 100%;
+            height: 120px;
+            background: #111;
+            color: #0f0;
+            font-family: monospace;
+            border: 1px solid #333;
+            padding: 10px;
+            font-size: 12px;
+            resize: vertical;
+            white-space: pre;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="controls">
+        <div class="btn-row">
+            <button onclick="playTab()">Play Tab</button>
+            <button onclick="resetFingers()">Reset Hand</button>
+        </div>
+        <textarea id="tab-input">
+e|--------------------------------|
+B|--------------------------------|
+G|--------------------------------|
+D|--------------------------------|
+A|--------------------------------|
+E|--0-0-1-2---2-1-0---0-0-1-2-----|</textarea>
+    </div>
+
+    <div id="app-container">
+        <!-- SVG will be injected here -->
+    </div>
+
+    <script>
+        const container = document.getElementById('app-container');
+        const NS = "http://www.w3.org/2000/svg";
+
+        let fingerRig = {};
+        let geometryTools = {};
+
+        // Configuration
+        const config = {
+            numFrets: 12,
+            numStrings: 6,
+            stringStokes: [2, 3, 4, 6, 8, 10],
+        };
+
+        const stringsConfig = [
+            { color: "#ff00dd", width: 2 },  // High E (Top)
+            { color: "#00ffff", width: 3 },  // B
+            { color: "#00ff66", width: 4 },  // G
+            { color: "#ffff00", width: 6 },  // D
+            { color: "#ff8800", width: 8 },  // A
+            { color: "#ff3300", width: 12 }  // Low E (Bottom)
+        ];
+
+        function createSVGElement(tag, attrs) {
+            const el = document.createElementNS(NS, tag);
+            for (const [key, value] of Object.entries(attrs)) {
+                el.setAttribute(key, value);
+            }
+            return el;
+        }
+
+        function generateFretboard() {
+            const width = 1200;
+            const height = 600;
+
+            const svg = createSVGElement("svg", {
+                viewBox: `0 0 ${width} ${height}`,
+                preserveAspectRatio: "xMidYMid meet",
+                id: "main-svg"
+            });
+
+            // Geometry Math
+            const scaleLength = 2000;
+            const fretPositions = [];
+            for (let i = 1; i <= config.numFrets; i++) {
+                const pos = scaleLength - (scaleLength / Math.pow(2, i / 12));
+                fretPositions.push(pos);
+            }
+            const pos12 = fretPositions[11];
+
+            const paddingX = 50;
+            const drawWidth = width - (paddingX * 2);
+            const maxDisplayedModelX = pos12 * 1.1;
+
+            function mapX(modelX) {
+                return paddingX + (modelX / maxDisplayedModelX) * drawWidth;
+            }
+
+            const midY = height / 2;
+            const nutHalfHeight = 150;
+            const endHalfHeight = 200;
+
+            function getNeckHalfHeight(xPerc) {
+                return nutHalfHeight + (endHalfHeight - nutHalfHeight) * xPerc;
+            }
+
+            geometryTools = {
+                mapX,
+                width,
+                height,
+                midY,
+                nutHalfHeight,
+                endHalfHeight,
+                fretPositions,
+                paddingX,
+                nutX: mapX(0)
+            };
+
+            // Draw Fretboard
+            const nutX = mapX(0);
+            const endX = width;
+
+            const neckPoints = [
+                `${nutX},${midY - nutHalfHeight}`,
+                `${endX},${midY - endHalfHeight}`,
+                `${endX},${midY + endHalfHeight}`,
+                `${nutX},${midY + nutHalfHeight}`
+            ].join(" ");
+
+            const board = createSVGElement("polygon", {
+                points: neckPoints,
+                fill: "#3e2723",
+                stroke: "#2d1b18",
+                "stroke-width": 5
+            });
+            svg.appendChild(board);
+
+            // Draw Nut
+            const nut = createSVGElement("rect", {
+                x: nutX - 20,
+                y: midY - nutHalfHeight - 5,
+                width: 20,
+                height: (nutHalfHeight * 2) + 10,
+                fill: "#eee8aa",
+                rx: 5
+            });
+            svg.appendChild(nut);
+
+            // Draw Frets
+            fretPositions.forEach(modelPos => {
+                const x = mapX(modelPos);
+                const xPerc = (x - nutX) / (width - nutX);
+                const currentHalfHeight = getNeckHalfHeight(xPerc);
+
+                const fret = createSVGElement("line", {
+                    x1: x,
+                    y1: midY - currentHalfHeight,
+                    x2: x,
+                    y2: midY + currentHalfHeight,
+                    stroke: "#cfd8dc",
+                    "stroke-width": 8,
+                    "stroke-linecap": "round"
+                });
+                svg.appendChild(fret);
+            });
+
+            // Draw Markers
+            const markers = [3, 5, 7, 9, 12];
+            markers.forEach(fretNum => {
+                const currentFretPos = fretPositions[fretNum - 1];
+                const prevFretPos = fretNum === 1 ? 0 : fretPositions[fretNum - 2];
+                const centerModelPos = (currentFretPos + prevFretPos) / 2;
+                const cx = mapX(centerModelPos);
+
+                if (fretNum === 12) {
+                    const yOffset = 60;
+                    [-1, 1].forEach(dir => {
+                        const dot = createSVGElement("circle", {
+                            cx: cx,
+                            cy: midY + (yOffset * dir),
+                            r: 12,
+                            fill: "#f0f0f0",
+                            opacity: 0.8
+                        });
+                        svg.appendChild(dot);
+                    });
+                } else {
+                    const dot = createSVGElement("circle", {
+                        cx: cx,
+                        cy: midY,
+                        r: 12,
+                        fill: "#f0f0f0",
+                        opacity: 0.8
+                    });
+                    svg.appendChild(dot);
+                }
+            });
+
+            // Draw Strings
+            const stringCount = stringsConfig.length;
+            stringsConfig.forEach((strCfg, index) => {
+                const margin = 0.15;
+                const availableSpace = 1 - (margin * 2);
+                const step = availableSpace / (stringCount - 1);
+                const yPerc = margin + (step * index);
+
+                const startY = midY - nutHalfHeight + (nutHalfHeight * 2 * yPerc);
+                const endY = midY - endHalfHeight + (endHalfHeight * 2 * yPerc);
+
+                const stringLine = createSVGElement("line", {
+                    id: `string-${index}`,
+                    x1: nutX,
+                    y1: startY,
+                    x2: width,
+                    y2: endY,
+                    stroke: strCfg.color,
+                    "stroke-width": strCfg.width,
+                    "stroke-opacity": 0.9,
+                    "filter": "drop-shadow(0px 0px 4px " + strCfg.color + ")"
+                });
+                svg.appendChild(stringLine);
+            });
+
+            // Ghost Hand
+            const handGroup = createSVGElement("g", {
+                id: "ghost-hand",
+                opacity: 0.8,
+                filter: "drop-shadow(2px 2px 4px rgba(0,0,0,0.5))"
+            });
+
+            const fret5Pos = fretPositions[4];
+            const fret4Pos = fretPositions[3];
+            const basePos = (fret5Pos + fret4Pos) / 2;
+            const handBaseX = mapX(basePos);
+
+            // Thumb
+            const neckHalfH = getNeckHalfHeight((handBaseX - nutX) / (width - nutX));
+            const neckTopY = midY - neckHalfH;
+            const thumb = createSVGElement("path", {
+                d: `M ${handBaseX - 30} ${neckTopY + 10} 
+                    Q ${handBaseX} ${neckTopY - 40} ${handBaseX + 40} ${neckTopY + 10}
+                    Q ${handBaseX} ${neckTopY + 20} ${handBaseX - 30} ${neckTopY + 10} Z`,
+                fill: "#4a4a4a",
+                stroke: "#e0e0e0",
+                "stroke-width": 3
+            });
+            handGroup.appendChild(thumb);
+
+            // Palm
+            const neckBottomY = midY + neckHalfH;
+            const palm = createSVGElement("path", {
+                d: `M ${handBaseX - 80} ${height} 
+                    L ${handBaseX - 70} ${neckBottomY + 40} 
+                    Q ${handBaseX} ${neckBottomY - 20} ${handBaseX + 80} ${neckBottomY + 40}
+                    L ${handBaseX + 90} ${height} Z`,
+                fill: "#4a4a4a",
+                stroke: "#e0e0e0",
+                "stroke-width": 3
+            });
+            handGroup.appendChild(palm);
+
+            // Fingers
+            const fingers = [
+                { id: "finger-index", color: "#ff3333", offset: -60, length: 140 },
+                { id: "finger-middle", color: "#3366ff", offset: -20, length: 155 },
+                { id: "finger-ring", color: "#33cc33", offset: 20, length: 150 },
+                { id: "finger-pinky", color: "#ffcc00", offset: 60, length: 120 }
+            ];
+
+            fingers.forEach(f => {
+                const fX = handBaseX + f.offset;
+                const fBaseY = neckBottomY + 20;
+                const fTipY = fBaseY - f.length;
+
+                const fingerGroup = createSVGElement("g", {
+                    id: f.id,
+                    class: "finger-group"
+                });
+
+                fingerRig[f.id] = {
+                    startX: fX,
+                    startY: fTipY + 8
+                };
+
+                const fingerPath = createSVGElement("path", {
+                    d: `M ${fX - 15} ${fBaseY} 
+                        L ${fX - 12} ${fTipY} 
+                        Q ${fX} ${fTipY - 15} ${fX + 12} ${fTipY} 
+                        L ${fX + 15} ${fBaseY} Z`,
+                    fill: "#4a4a4a",
+                    stroke: "#e0e0e0",
+                    "stroke-width": 3
+                });
+                fingerGroup.appendChild(fingerPath);
+
+                const tip = createSVGElement("circle", {
+                    cx: fX,
+                    cy: fTipY + 8,
+                    r: 10,
+                    fill: f.color
+                });
+                fingerGroup.appendChild(tip);
+
+                handGroup.appendChild(fingerGroup);
+            });
+
+            svg.appendChild(handGroup);
+            return svg;
+        }
+
+        container.appendChild(generateFretboard());
+
+
+        // --- ANIMATION LOGIC ---
+
+        function getNoteCoordinates(stringIndex, fretNumber) {
+            let x;
+            if (fretNumber === 0) {
+                x = geometryTools.nutX - 15;
+            } else {
+                const currentPos = geometryTools.fretPositions[fretNumber - 1];
+                const prevPos = (fretNumber === 1) ? 0 : geometryTools.fretPositions[fretNumber - 2];
+                const midModel = (currentPos + prevPos) / 2;
+                x = geometryTools.mapX(midModel);
+            }
+
+            const margin = 0.15;
+            const availableSpace = 1 - (margin * 2);
+            const stringCount = 6;
+            const step = availableSpace / (stringCount - 1);
+            const yPerc = margin + (step * stringIndex);
+
+            const xPerc = (x - geometryTools.nutX) / (geometryTools.width - geometryTools.nutX);
+            const currentHalfHeight = geometryTools.nutHalfHeight +
+                (geometryTools.endHalfHeight - geometryTools.nutHalfHeight) * xPerc;
+
+            const neckTopY = geometryTools.midY - currentHalfHeight;
+            const neckHeight = currentHalfHeight * 2;
+            const y = neckTopY + (neckHeight * yPerc);
+
+            return { x, y };
+        }
+
+        function moveFingerTo(fingerId, stringIndex, fretNumber) {
+            const rig = fingerRig[fingerId];
+            if (!rig) return;
+
+            const target = getNoteCoordinates(stringIndex, fretNumber);
+            const dx = target.x - rig.startX;
+            const dy = target.y - rig.startY;
+
+            const el = document.getElementById(fingerId);
+            if (el) {
+                el.style.transform = `translate(${dx}px, ${dy}px)`;
+            }
+
+            const strEl = document.getElementById(`string-${stringIndex}`);
+            if (strEl) {
+                strEl.classList.add("string-active");
+            }
+        }
+
+        function resetFingers() {
+            Object.keys(fingerRig).forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.transform = "none";
+            });
+            clearGlow();
+        }
+
+        function clearGlow() {
+            for (let i = 0; i < 6; i++) {
+                const s = document.getElementById(`string-${i}`);
+                if (s) s.classList.remove("string-active");
+            }
+        }
+
+        // --- TAB PARSER ---
+
+        async function playTab() {
+            const raw = document.getElementById("tab-input").value;
+            const lines = raw.split("\n");
+
+            // 1. Identify valid tab lines (must start with string name or be part of the block)
+            // Just take the first 6 non-empty lines found.
+            const validLines = lines.filter(l => l.trim().length > 0).slice(0, 6);
+            if (validLines.length < 6) return alert("Invalid Tab: Need 6 lines");
+
+            // Map lines to strings: 
+            // Index 0 in validLines -> High E (String 0)
+            // Index 5 in validLines -> Low E (String 5)
+            // This assumes the input is standard tab format EBGDAE (Top to Bottom visually)
+            // My stringsConfig is 0=Top, 5=Bottom. So direct mapping works.
+
+            // 2. Parse Columns
+            // Find max length
+            const maxLength = Math.max(...validLines.map(l => l.length));
+            const events = [];
+            const timePerChar = 180; // ms speed
+
+            for (let col = 0; col < maxLength; col++) {
+                let notesInCol = [];
+                let isNote = false;
+
+                for (let strIdx = 0; strIdx < 6; strIdx++) {
+                    const char = validLines[strIdx][col];
+                    if (!char) continue;
+
+                    if (!isNaN(parseInt(char))) {
+                        // It's a number
+                        notesInCol.push({ string: strIdx, fret: parseInt(char) });
+                        isNote = true;
+                    }
+                }
+
+                // Add event
+                // If it's just dashes, we still wait timePerChar
+                // If it's notes, we play them, then wait timePerChar
+                // Optimization: Consecutive dashes can be accumulated? 
+                // For "Visual" flow, treating every char as a tick is easiest.
+
+                if (isNote) {
+                    events.push({ type: 'note', notes: notesInCol, delay: timePerChar });
+                } else {
+                    events.push({ type: 'rest', delay: timePerChar });
+                }
+            }
+
+            // 3. Sequencer Loop
+            resetFingers();
+
+            for (const event of events) {
+                clearGlow();
+
+                if (event.type === 'note') {
+                    event.notes.forEach(note => {
+                        // Allocator: 
+                        // Low Strings (4, 5) -> Index
+                        // Mid Strings (2, 3) -> Middle
+                        // High Strings (0, 1) -> Ring
+                        let fingerId = "finger-index";
+                        if (note.string <= 1) fingerId = "finger-ring";
+                        else if (note.string <= 3) fingerId = "finger-middle";
+
+                        moveFingerTo(fingerId, note.string, note.fret);
+                    });
+                } else {
+                    // Rest: Do we retract fingers? 
+                    // Better to keep them in place like a real player until next move.
+                    // But maybe dim the strings? Done by clearGlow().
+                }
+
+                await new Promise(r => setTimeout(r, event.delay));
+            }
+
+            clearGlow();
+            resetFingers();
+        }
+
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Sasha's Aquarium</title>
+
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://fishtank1.netlify.app/">
+    <meta property="og:title" content="Sasha's Virtual Aquarium">
+    <meta property="og:description" content="A special 3D aquarium built just for you.">
+    <meta property="og:image" content="https://fishtank1.netlify.app/assets/bg.jpg">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+
+    <style>
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            background-color: #001e36;
+
+            /* 1. The Original Image */
+            background-image: url('assets/bg.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        /* --- 🌊 THE TINT LAYER --- */
+        #tint-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            background: rgba(0, 30, 54, 0.4);
+            pointer-events: none;
+        }
+
+        canvas {
+            display: block;
+            position: relative;
+            z-index: 1;
+        }
+
+        #partyBtn {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid white;
+            color: #333;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-family: sans-serif;
+            font-weight: bold;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+            font-size: 16px;
+            transition: all 0.3s ease;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+
+<body>
+    <div id="tint-layer"></div>
+
+    <button id="partyBtn">🪩 Party Mode</button>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // 1. Setup Scene
+        const scene = new THREE.Scene();
+        const chillFog = new THREE.Fog(0x001e36, 5, 20); // Fog adjusted closer for new view
+        scene.fog = chillFog;
+
+        // 2. Camera (UPDATED for Zoomed-In Look)
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        // Changed from (0, 2, 9) to (0, 1, 6) -> Closer and more eye-level
+        camera.position.set(0, 1, 6);
+
+        // 3. Renderer
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+        document.body.appendChild(renderer.domElement);
+
+        // --- STANDARD LIGHTING ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
+        scene.add(ambientLight);
+        const topLight = new THREE.DirectionalLight(0xffffff, 3);
+        topLight.position.set(5, 10, 7);
+        scene.add(topLight);
+        const frontLight = new THREE.DirectionalLight(0xffffff, 1);
+        frontLight.position.set(0, 0, 10);
+        scene.add(frontLight);
+
+        // --- RAVE RIG ---
+        const raveGroup = new THREE.Group();
+        scene.add(raveGroup);
+        raveGroup.visible = false;
+
+        // A. DISCO BALL
+        const discoBallGeo = new THREE.SphereGeometry(1.5, 32, 32);
+        const discoBallMat = new THREE.MeshPhysicalMaterial({
+            color: 0xffffff,
+            roughness: 0.0,
+            metalness: 1.0,
+            reflectivity: 1.0,
+            clearcoat: 1.0,
+            emissive: 0x111111,
+            envMapIntensity: 5.0
+        });
+        const discoBall = new THREE.Mesh(discoBallGeo, discoBallMat);
+        discoBall.position.set(0, 8, 0);
+        raveGroup.add(discoBall);
+
+        // B. FILL & SPOT LIGHTS
+        const raveHemi = new THREE.HemisphereLight(0xff00ff, 0x00ffff, 0.8);
+        raveGroup.add(raveHemi);
+
+        function createSpotLight(color, xPos, zPos) {
+            const spot = new THREE.SpotLight(color, 2000);
+            spot.angle = 0.8;
+            spot.penumbra = 0.5;
+            spot.position.set(xPos, 5, zPos);
+            spot.target = discoBall;
+            raveGroup.add(spot);
+            return spot;
+        }
+        createSpotLight(0xff00ff, -10, 10);
+        createSpotLight(0x00ffff, 10, 10);
+        createSpotLight(0xffff00, 0, -10);
+
+        // --- MATERIALS ---
+        const raveMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0xffffff,
+            metalness: 1.0,
+            roughness: 0.05,
+            ior: 2.5,
+            reflectivity: 1.0,
+            clearcoat: 1.0,
+            emissive: 0x222244,
+            emissiveIntensity: 0.2
+        });
+        raveMaterial.envMapIntensity = 3.0;
+
+        const pmremGenerator = new THREE.PMREMGenerator(renderer);
+        pmremGenerator.compileEquirectangularShader();
+
+        new THREE.TextureLoader().load('assets/bg.jpg', function (texture) {
+            texture.mapping = THREE.EquirectangularReflectionMapping;
+            texture.colorSpace = THREE.SRGBColorSpace;
+            raveMaterial.envMap = texture;
+            discoBallMat.envMap = texture;
+            scene.environment = texture;
+            raveMaterial.needsUpdate = true;
+            discoBallMat.needsUpdate = true;
+        });
+
+        // --- 5. PARTICLES ---
+        const particlesGeometry = new THREE.BufferGeometry();
+        const particlesCount = 1000;
+        const posArray = new Float32Array(particlesCount * 3);
+        for (let i = 0; i < particlesCount * 3; i++) {
+            posArray[i] = (Math.random() - 0.5) * 30;
+        }
+        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        const particlesMaterial = new THREE.PointsMaterial({
+            size: 0.05, color: 0xffffff, transparent: true, opacity: 0.6
+        });
+        const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+        scene.add(particlesMesh);
+
+        // --- 6. FISH SYSTEM ---
+        const loader = new GLTFLoader();
+        const fishSchool = [];
+        const raveSquad = [];
+
+        function addFish(fileName, scale, speed, timeOffset, yOffset, isRaveOnly = false) {
+            loader.load(`assets/${fileName}`, function (gltf) {
+                const fish = gltf.scene;
+                fish.scale.set(scale, scale, scale);
+
+                // Check if this is Sasha
+                const isSasha = fileName.includes('sasha');
+
+                if (gltf.animations && gltf.animations.length > 0) {
+                    const mixer = new THREE.AnimationMixer(fish);
+                    const action = mixer.clipAction(gltf.animations[0]);
+                    action.play();
+                    fish.userData.mixer = mixer;
+                }
+
+                const box = new THREE.Box3().setFromObject(fish);
+                const center = box.getCenter(new THREE.Vector3());
+                fish.position.sub(center);
+
+                if (isRaveOnly) {
+                    fish.visible = false;
+                    raveSquad.push(fish);
+                } else {
+                    fishSchool.push(fish);
+                }
+                scene.add(fish);
+
+                // --- SPECIAL MATERIAL FIXES ---
+                if (fileName === 'linguiniii.glb') {
+                    // Fix for "Black Back" issue: Apply red emissive to fill in dark areas
+                    fish.traverse((child) => {
+                        if (child.isMesh) {
+                            // Use a soft fabric-like roughness
+                            child.material.roughness = 1.0;
+                            child.material.metalness = 0.0;
+                            // Add red glow to cover black pixels
+                            child.material.emissive = new THREE.Color(0xaa2222);
+                            child.material.emissiveIntensity = 0.4;
+                            // Ensure double sided to prevent backface culling holes
+                            child.material.side = THREE.DoubleSide;
+                        }
+                    });
+                }
+
+                // Store Data
+                fish.userData.speed = speed;
+                fish.userData.offset = timeOffset;
+                fish.userData.yBase = yOffset;
+                fish.userData.isRaveOnly = isRaveOnly;
+                fish.userData.isSasha = isSasha;
+                fish.userData.originalMaterial = null;
+
+            }, undefined, function (error) {
+                console.error(`Could not load ${fileName}:`, error);
+            });
+        }
+
+        // ============================================
+        // 🐠 FISH ROLL CALL
+        // ============================================
+
+        // SASHA: Hero
+        addFish('sasha-scuba.glb', 1.5, 0.1, 0, 0);
+
+        // ADD LINGUINIII HERE:
+        addFish('linguiniii.glb', 1.0, 0.3, 3, 1.5);
+
+        addFish('shark.glb', 1.8, 0.45, 2, 2.0);
+        addFish('manta.glb', 2.5, 0.1, 3, -3.5);
+
+        // Reduced fish count
+        addFish('tetra.glb', 1.0, 0.55, 0, 0.0);
+        addFish('tetra.glb', 0.9, 0.6, 0.5, 0.5);
+        addFish('tetra.glb', 1.1, 0.5, 1.0, -0.5);
+        addFish('tetra.glb', 0.8, 0.65, 2.0, 0.2);
+
+        addFish('squirrelfish.glb', 1.5, 0.25, 0, -2.0);
+        addFish('squirrelfish.glb', 1.4, 0.3, 2, -1.5);
+
+        addFish('angelfish.glb', 1.3, 0.15, 1, -0.5);
+        addFish('angelfish.glb', 1.2, 0.16, 2.5, -0.8);
+        // 🧡 RONAN (Seahorse) - THE LATE ARRIVAL
+        // Scale: 4.5 | Delay: 3 Seconds
+        setTimeout(() => {
+            addFish('ronanseahorse.glb', 4.5, 0.2, 5.5, -1.2);
+        }, 3000);
+
+        // RAVE SQUAD
+        for (let i = 0; i < 4; i++) {
+            addFish('shark.glb', 1.5 + Math.random() * 0.5, 0.4 + Math.random() * 0.2, Math.random() * 10, (Math.random() - 0.5) * 5, true);
+        }
+        for (let i = 0; i < 5; i++) {
+            addFish('squirrelfish.glb', 1.2 + Math.random() * 0.4, 0.2 + Math.random() * 0.1, Math.random() * 10, (Math.random() - 0.5) * 5, true);
+        }
+
+        // ============================================
+        // 🎛️ MODE SWITCHING
+        // ============================================
+        let isPartyMode = false;
+        const btn = document.getElementById('partyBtn');
+
+        btn.addEventListener('click', () => {
+            isPartyMode = !isPartyMode;
+
+            if (isPartyMode) {
+                btn.innerText = "🛑 Chill Mode";
+                btn.style.background = "rgba(255, 0, 100, 1.0)";
+                btn.style.color = "white";
+                scene.fog = new THREE.Fog(0x220033, 10, 40);
+                raveGroup.visible = true;
+
+                const allFish = [...fishSchool, ...raveSquad];
+                allFish.forEach(fish => {
+                    if (fish.userData.isRaveOnly) fish.visible = true;
+                    fish.traverse((child) => {
+                        if (child.isMesh) {
+                            if (!child.userData.originalMaterial) child.userData.originalMaterial = child.material;
+                            const myRaveMat = raveMaterial.clone();
+                            const hue = Math.random();
+                            myRaveMat.color.setHSL(hue, 0.8, 0.5);
+                            myRaveMat.emissive.setHSL(hue, 1.0, 0.1);
+                            child.material = myRaveMat;
+                        }
+                    });
+                });
+
+            } else {
+                btn.innerText = "🪩 Party Mode";
+                btn.style.background = "rgba(255, 255, 255, 0.9)";
+                btn.style.color = "#333";
+                document.body.style.filter = "none";
+                scene.fog = chillFog;
+                ambientLight.intensity = 1.5;
+                topLight.intensity = 3;
+                frontLight.intensity = 1;
+                raveGroup.visible = false;
+
+                const allFish = [...fishSchool, ...raveSquad];
+                allFish.forEach(fish => {
+                    if (fish.userData.isRaveOnly) fish.visible = false;
+                    fish.traverse((child) => {
+                        if (child.isMesh && child.userData.originalMaterial) {
+                            child.material = child.userData.originalMaterial;
+                        }
+                    });
+                });
+            }
+        });
+
+        // 7. Animation Loop
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const delta = clock.getDelta();
+            const masterTime = clock.getElapsedTime();
+
+            if (isPartyMode) {
+                discoBall.rotation.y += 0.05;
+                discoBall.rotation.z = Math.sin(masterTime) * 0.2;
+                particlesMaterial.opacity = 0.5 + Math.sin(masterTime * 20) * 0.3;
+                particlesMaterial.size = 0.08 + Math.sin(masterTime * 10) * 0.03;
+            }
+
+            particlesMesh.rotation.y = masterTime * 0.05;
+            particlesMesh.position.y = Math.sin(masterTime * 0.2) * 0.5;
+
+            const allFish = [...fishSchool, ...raveSquad];
+            allFish.forEach(fish => {
+                if (!fish.visible) return;
+
+                if (fish.userData.mixer) {
+                    fish.userData.mixer.update(delta);
+                }
+
+                const data = fish.userData;
+
+                // --- 🌟 SASHA'S HERO LOGIC 🌟 ---
+                if (data.isSasha) {
+                    const driftX = Math.sin(masterTime * 0.5) * 2.0;
+                    const driftY = Math.sin(masterTime * 0.8) * 0.5;
+                    fish.position.set(driftX, driftY, 0);
+                    fish.rotation.y = Math.sin(masterTime * 0.3) * 0.5;
+
+                } else {
+                    const time = (masterTime * data.speed) + data.offset;
+                    const nextT = time + 0.1;
+
+                    const x = Math.sin(time) * 7.0;
+                    const z = Math.sin(time * 2) * 4.5;
+                    const y = Math.sin(time * 1.5) * 1.0 + data.yBase;
+
+                    const nextX = Math.sin(nextT) * 7.0;
+                    const nextZ = Math.sin(nextT * 2) * 4.5;
+                    const nextY = Math.sin(nextT * 1.5) * 1.0 + data.yBase;
+
+                    fish.position.set(x, y, z);
+                    fish.lookAt(nextX, nextY, nextZ);
+                }
+            });
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.minDistance = 2; // Allow user to zoom in even more if they want
+        controls.maxDistance = 15;
+        controls.maxPolarAngle = Math.PI / 2 - 0.1;
+        controls.enablePan = false;
+
+        function adjustCameraForMobile() {
+            const aspect = window.innerWidth / window.innerHeight;
+            camera.aspect = aspect;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+
+            // UPDATED: Logic to keep the zoomed-in feel on mobile too
+            if (aspect < 1) {
+                camera.position.z = 10; // Closer mobile default
+            } else {
+                camera.position.z = 6;  // Closer desktop default
+            }
+        }
+        adjustCameraForMobile();
+        window.addEventListener('resize', adjustCameraForMobile);
+
+        animate();
+    </script>
+</body>
+
+</html>
