@@ -276,6 +276,25 @@
                 padding: 20px;
                 overflow-y: auto;
             }
+
+            /* Mobile: Smaller, less intrusive buttons */
+            #directoryBtn,
+            #partyBtn,
+            #tankControlsBtn {
+                padding: 8px 16px;
+                font-size: 12px;
+                transform: scale(0.9);
+                transform-origin: bottom left;
+                left: 10px !important;
+            }
+
+            #partyBtn {
+                bottom: 60px !important;
+            }
+
+            #tankControlsBtn {
+                bottom: 100px !important;
+            }
         }
 
         /* HUD Overlay (Hidden by Default) */
