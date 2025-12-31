@@ -203,14 +203,47 @@
             margin-bottom: 20px;
         }
 
-        #partyBtn {
-            bottom: 80px;
+        /* UNIFIED BUTTON STYLES */
+        #partyBtn,
+        #directoryBtn,
+        #tankControlsBtn {
+            position: fixed;
             left: 20px;
+            padding: 8px 16px;
+            /* Smaller padding */
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            z-index: 1001;
+            /* Auto width for compact look */
+            width: auto;
+            text-align: center;
+            font-size: 13px;
+            /* Smaller font */
+        }
+
+        /* STACKING ORDER (Bottom-Left) */
+        #partyBtn {
+            bottom: 30px;
+        }
+
+        #directoryBtn {
+            bottom: 80px;
         }
 
         #tankControlsBtn {
-            bottom: 140px;
-            left: 20px;
+            bottom: 130px;
+        }
+
+        /* Hide Close Buttons (User Request) */
+        .close-btn {
+            display: none !important;
         }
 
         .bio-stats {
@@ -277,23 +310,29 @@
                 overflow-y: auto;
             }
 
-            /* Mobile: Smaller, less intrusive buttons */
+            /* Mobile: Identical sizing and stacking */
             #directoryBtn,
             #partyBtn,
             #tankControlsBtn {
-                padding: 8px 16px;
-                font-size: 12px;
+                padding: 6px 12px;
+                font-size: 11px;
+                left: 10px !important;
+                width: auto;
                 transform: scale(0.9);
                 transform-origin: bottom left;
-                left: 10px !important;
             }
 
+            /* Tighter Mobile Stacking */
             #partyBtn {
-                bottom: 60px !important;
+                bottom: 30px !important;
+            }
+
+            #directoryBtn {
+                bottom: 80px !important;
             }
 
             #tankControlsBtn {
-                bottom: 100px !important;
+                bottom: 130px !important;
             }
         }
 
@@ -402,9 +441,9 @@
 <body>
     <div id="tint-layer"></div>
 
-    <button id="directoryBtn">📖 Fish Guide</button>
-    <button id="partyBtn">🪩 Party Mode</button>
-    <button id="tankControlsBtn">⚙️ Tank Controls</button>
+    <button id="directoryBtn">Fish Guide</button>
+    <button id="partyBtn">Party Mode</button>
+    <button id="tankControlsBtn">Tank Controls</button>
 
     <!-- Fish Directory Modal -->
     <div id="directoryModal">
@@ -510,7 +549,8 @@
         const tankControlsBtn = document.getElementById('tankControlsBtn');
         const tankHUD = document.getElementById('tankHUD');
 
-        tankControlsBtn.onclick = () => {
+        tankControlsBtn.onclick = (e) => {
+            e.stopPropagation(); // Prevent window click from closing it immediately
             tankHUD.classList.toggle('visible');
         };
 
@@ -892,14 +932,29 @@
 
         // Open/Close Logic
         if (dirBtn) {
-            dirBtn.onclick = () => {
+            dirBtn.onclick = (e) => {
+                e.stopPropagation(); // Prevent immediate close
                 dirModal.style.display = 'flex';
                 if (document.getElementById('bioName').innerText === 'Select a Fish') showBio('Sasha Scuba');
             };
         }
-        if (closeDir) closeDir.onclick = () => dirModal.style.display = 'none';
+
+        // Removed closeDir click listener (No X button)
+
+        // CLICK OUTSIDE LOGIC (Universal)
         window.onclick = (e) => {
-            if (e.target == dirModal) dirModal.style.display = 'none';
+            // 1. Close Directory Modal if clicking outside content
+            if (e.target == dirModal) {
+                dirModal.style.display = 'none';
+            }
+
+            // 2. Close Tank HUD if clicking outside HUD AND not on the toggle button
+            // using .closest() to check if click was inside the HUD
+            if (tankHUD.classList.contains('visible') &&
+                !e.target.closest('#tankHUD') &&
+                e.target !== tankControlsBtn) {
+                tankHUD.classList.remove('visible');
+            }
         };
 
         // ============================================
