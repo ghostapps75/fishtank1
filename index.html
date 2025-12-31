@@ -45,44 +45,10 @@
             z-index: 1;
         }
 
-        #partyBtn {
-            position: absolute;
-            bottom: 30px;
-            right: 30px;
-            z-index: 100;
-            background: rgba(255, 255, 255, 0.9);
-            border: 2px solid white;
-            color: #333;
-            padding: 10px 20px;
-            border-radius: 30px;
-            font-family: sans-serif;
-            font-weight: bold;
-            cursor: pointer;
-            backdrop-filter: blur(5px);
-            font-size: 16px;
-            transition: all 0.3s ease;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
-        }
+        /* Legacy partyBtn styles removed */
 
         /* FISH DIRECTORY UI */
-        #directoryBtn {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            /* Left side to balance Party Mode */
-            padding: 12px 24px;
-            background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 30px;
-            color: white;
-            font-family: 'Inter', sans-serif;
-            font-weight: 600;
-            cursor: pointer;
-            z-index: 1000;
-            transition: all 0.3s ease;
-        }
+        /* Legacy directoryBtn styles removed */
 
         #directoryBtn:hover {
             background: rgba(255, 255, 255, 0.4);
@@ -203,29 +169,36 @@
             margin-bottom: 20px;
         }
 
-        /* UNIFIED BUTTON STYLES */
+        /* UNIFIED BUTTON STYLES - COMPACT */
         #partyBtn,
         #directoryBtn,
         #tankControlsBtn {
             position: fixed;
             left: 20px;
-            padding: 8px 16px;
-            /* Smaller padding */
-            background: rgba(255, 255, 255, 0.9);
-            color: #333;
-            border: none;
-            border-radius: 30px;
+            padding: 6px 12px;
+            /* Very compact */
+            background: rgba(255, 255, 255, 0.6);
+            /* More transparent */
+            color: #222;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 20px;
             cursor: pointer;
             font-family: 'Poppins', sans-serif;
             font-weight: 600;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             transition: all 0.3s ease;
             z-index: 1001;
-            /* Auto width for compact look */
             width: auto;
             text-align: center;
-            font-size: 13px;
-            /* Smaller font */
+            font-size: 11px;
+            /* Small base font */
+        }
+
+        #partyBtn:hover,
+        #directoryBtn:hover,
+        #tankControlsBtn:hover {
+            background: rgba(255, 255, 255, 0.9);
+            transform: scale(1.05);
         }
 
         /* STACKING ORDER (Bottom-Left) */
@@ -310,15 +283,16 @@
                 overflow-y: auto;
             }
 
-            /* Mobile: Identical sizing and stacking */
+            /* Mobile: Tiny scaling */
             #directoryBtn,
             #partyBtn,
             #tankControlsBtn {
-                padding: 6px 12px;
-                font-size: 11px;
+                padding: 4px 10px;
+                font-size: 10px;
                 left: 10px !important;
-                width: auto;
-                transform: scale(0.9);
+                background: rgba(255, 255, 255, 0.5);
+                /* Even more subtle on mobile */
+                transform: scale(0.85);
                 transform-origin: bottom left;
             }
 
