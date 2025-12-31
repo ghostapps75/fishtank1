@@ -268,93 +268,90 @@
             }
         }
 
-        /* --- MANAGE TANK UI --- */
-        #manageBtn {
-            position: absolute;
-            top: 20px;
-            left: 180px;
-            /* Right of Directory Btn */
-            padding: 12px 24px;
-            background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 30px;
+        /* --- TANK HUD --- */
+        #tankHUD {
+            position: fixed;
+            top: 90px;
+            right: 20px;
+            width: 250px;
+            background: rgba(0, 30, 54, 0.6);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            padding: 15px;
+            z-index: 1000;
             color: white;
             font-family: 'Inter', sans-serif;
-            font-weight: 600;
-            cursor: pointer;
-            z-index: 1000;
-            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            max-height: 80vh;
+            overflow-y: auto;
+            transition: opacity 0.3s;
         }
 
-        #manageBtn:hover {
-            background: rgba(255, 255, 255, 0.4);
-            transform: scale(1.05);
+        .hud-header {
+            font-size: 14px;
+            font-weight: 700;
+            color: #40e0d0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 5px;
         }
 
-        .manager-row {
+        .hud-row {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            background: rgba(255, 255, 255, 0.05);
-            padding: 15px;
-            margin-bottom: 10px;
-            border-radius: 10px;
+            margin-bottom: 12px;
+            font-size: 13px;
         }
 
-        .manager-label {
+        .hud-label {
             display: flex;
             align-items: center;
-            gap: 10px;
-            font-size: 16px;
-            font-weight: 600;
-            width: 200px;
+            gap: 8px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.9);
         }
 
-        .manager-controls {
+        .hud-controls {
             display: flex;
             align-items: center;
-            gap: 20px;
-            flex: 1;
-            justify-content: flex-end;
+            gap: 8px;
         }
 
-        .update-btn {
-            background: #40e0d0;
-            color: #001e36;
-            border: none;
-            padding: 15px 40px;
-            font-size: 18px;
-            font-weight: 800;
-            border-radius: 30px;
-            cursor: pointer;
-            width: 100%;
-            margin-top: 20px;
-            transition: transform 0.2s;
-        }
-
-        .update-btn:hover {
-            transform: scale(1.02);
-        }
-
-        /* Custom Checkbox */
-        input[type="checkbox"] {
-            accent-color: #40e0d0;
-            width: 20px;
-            height: 20px;
-        }
-
-        /* Custom Slider */
-        input[type="range"] {
-            accent-color: #40e0d0;
-        }
-
-        select {
-            background: rgba(0, 0, 0, 0.3);
+        /* Minimal Inputs */
+        .hud-select {
+            background: rgba(0, 0, 0, 0.4);
             color: white;
             border: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 5px 10px;
+            padding: 4px;
             border-radius: 5px;
+            font-size: 12px;
+            width: 100px;
+        }
+
+        .hud-slider {
+            width: 80px;
+            height: 4px;
+            accent-color: #40e0d0;
+            border-radius: 2px;
+        }
+
+        .hud-value {
+            font-size: 12px;
+            color: #40e0d0;
+            width: 20px;
+            text-align: right;
+        }
+
+        /* Checkbox */
+        .hud-check {
+            accent-color: #40e0d0;
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
         }
     </style>
     <script type="importmap">
@@ -371,7 +368,6 @@
     <div id="tint-layer"></div>
 
     <button id="directoryBtn">📖 Fish Guide</button>
-    <button id="manageBtn">⚙️ Manage Tank</button>
     <button id="partyBtn">🪩 Party Mode</button>
 
     <!-- Fish Directory Modal -->
@@ -399,17 +395,9 @@
         </div>
     </div>
 
-    <!-- Manager Modal -->
-    <div id="directoryModal" class="manager-modal-wrapper" style="display: none;">
-        <div class="modal-content"
-            style="flex-direction: column; padding: 30px; height: auto; max-height: 90vh; overflow-y: auto;">
-            <span class="close-btn" id="closeMgr">&times;</span>
-            <h2 style="margin-top: 0; color: #40e0d0; text-align: center; margin-bottom: 20px;">⚙️ Tank Manager</h2>
-            <div id="managerContent">
-                <!-- Rows injected here -->
-            </div>
-            <button class="update-btn" id="applyManager">Update Tank</button>
-        </div>
+    <div id="tankHUD">
+        <div class="hud-header">Tank Controls</div>
+        <div id="hudContent"></div>
     </div>
 
     <script type="module">
@@ -588,14 +576,14 @@
 
         // Default Config
         const fishConfig = {
-            "Sasha Scuba": { active: true, locked: true, icon: "🤿" },
-            "Ronan": { active: true, locked: true, icon: "👔", scale: "Medium" },
-            "Linguiniii": { active: true, icon: "🍁", school: false, count: 1 },
-            "Shark": { active: true, icon: "🦈", school: false },
-            "Manta": { active: true, icon: "🪁", school: false },
-            "Tetra": { active: true, icon: "🐟", school: true, count: 4 },
-            "Squirrelfish": { active: true, icon: "🐠", school: true, count: 2 },
-            "Angelfish": { active: true, icon: "👼", school: true, count: 2 }
+            "Sasha Scuba": { active: true, hidden: true },
+            "Shark": { active: true, hidden: true },
+            "Manta": { active: true, hidden: true },
+            "Ronan": { active: true, scale: "Normal" }, // Normal vs Overbearing
+            "Linguiniii": { active: true, count: 1, min: 1, max: 15 },
+            "Tetra": { active: true, count: 4, min: 1, max: 10 },
+            "Squirrelfish": { active: true, count: 2, min: 2, max: 8 },
+            "Angelfish": { active: true, count: 4, min: 4, max: 6 }
         };
 
         const fishBios = {
@@ -675,17 +663,13 @@
             // 2. Ronan
             if (fishConfig["Ronan"].active) {
                 let rScale = 4.5;
-                if (fishConfig["Ronan"].scale === "Small") rScale = 2.0;
-                if (fishConfig["Ronan"].scale === "Obnoxious") rScale = 9.0;
-
-                // Keep the delay effect? Or just add him. Let's keep the delay logic inside addFish or just use setTimeout here.
-                // Re-creating the timeout logic might be buggy if called repeatedly. Let's just spawn him.
+                if (fishConfig["Ronan"].scale === "Overbearing") rScale = 10.0;
                 addFish('ronanseahorse.glb', rScale, 0.2, 5.5, -1.2);
             }
 
             // 3. Linguiniii
             if (fishConfig["Linguiniii"].active) {
-                const count = fishConfig["Linguiniii"].school ? fishConfig["Linguiniii"].count : 1;
+                const count = fishConfig["Linguiniii"].count;
                 for (let i = 0; i < count; i++) {
                     addFish('linguiniii.glb', 1.0, 0.3, 3 + (i * 0.5), 1.5 + (Math.random() - 0.5));
                 }
@@ -699,7 +683,7 @@
 
             // 6. Tetra
             if (fishConfig["Tetra"].active) {
-                const count = fishConfig["Tetra"].school ? fishConfig["Tetra"].count : 1;
+                const count = fishConfig["Tetra"].count;
                 for (let i = 0; i < count; i++) {
                     addFish('tetra.glb', 1.0, 0.55, i * 0.5, (Math.random() - 0.5) * 2);
                 }
@@ -707,7 +691,7 @@
 
             // 7. Squirrelfish
             if (fishConfig["Squirrelfish"].active) {
-                const count = fishConfig["Squirrelfish"].school ? fishConfig["Squirrelfish"].count : 1;
+                const count = fishConfig["Squirrelfish"].count;
                 for (let i = 0; i < count; i++) {
                     addFish('squirrelfish.glb', 1.4, 0.3, 2 + i, -1.5 + (Math.random() - 0.5));
                 }
@@ -715,7 +699,7 @@
 
             // 8. Angelfish
             if (fishConfig["Angelfish"].active) {
-                const count = fishConfig["Angelfish"].school ? fishConfig["Angelfish"].count : 1;
+                const count = fishConfig["Angelfish"].count;
                 for (let i = 0; i < count; i++) {
                     addFish('angelfish.glb', 1.3, 0.15, 1 + i, -0.5 + (Math.random() - 0.5));
                 }
@@ -739,61 +723,42 @@
         // No, I'll rely on a second Replace call to fix the ID if needed, or better:
         // * I will access the wrapper by class `manager-modal-wrapper` which I added. *
 
-        function renderManager() {
-            const container = document.getElementById('managerContent');
+        // --- HUD RENDERING ---
+        function renderHUD() {
+            const container = document.getElementById('hudContent');
+            if (!container) return; // Safety check
             container.innerHTML = '';
 
             Object.keys(fishConfig).forEach(key => {
                 const conf = fishConfig[key];
+                if (conf.hidden) return; // Skip Sasha, Shark, Manta
+
                 const row = document.createElement('div');
-                row.className = 'manager-row';
+                row.className = 'hud-row';
 
                 // Label
-                let html = `<div class="manager-label"><span>${conf.icon}</span> ${key}</div>`;
+                let icon = fishBios[key] ? fishBios[key].icon : '🐟';
+                let html = `<div class="hud-label"><span>${icon}</span> ${key}</div>`;
+                html += `<div class="hud-controls">`;
 
-                // Controls
-                html += `<div class="manager-controls">`;
-
-                // 1. Active Toggle (Disabled if locked)
-                if (conf.locked) {
-                    html += `<span style="opacity:0.6; font-size:12px;">🔒 Locked</span>`;
-                } else {
-                    html += `<label style="font-size:12px; display:flex; gap:5px; align-items:center;">
-                        Active <input type="checkbox" class="cfg-active" data-fish="${key}" ${conf.active ? 'checked' : ''}>
-                     </label>`;
-                }
-
-                // 2. Ronan Scale
+                // 1. Ronan Controls
                 if (key === 'Ronan') {
                     html += `
-                    <select class="cfg-scale" data-fish="${key}">
-                        <option value="Small" ${conf.scale === 'Small' ? 'selected' : ''}>Small</option>
-                        <option value="Medium" ${conf.scale === 'Medium' ? 'selected' : ''}>Medium</option>
-                        <option value="Obnoxious" ${conf.scale === 'Obnoxious' ? 'selected' : ''}>Obnoxious</option>
+                    <select class="hud-select" data-fish="${key}">
+                        <option value="Normal" ${conf.scale === 'Normal' ? 'selected' : ''}>Normal</option>
+                        <option value="Overbearing" ${conf.scale === 'Overbearing' ? 'selected' : ''}>Overbearing</option>
                     </select>
                     `;
                 }
+                // 2. Others (Toggle + Slider) - includes Linguiniii
+                else {
+                    // Checkbox
+                    html += `<input type="checkbox" class="hud-check" data-fish="${key}" ${conf.active ? 'checked' : ''}>`;
 
-                // 3. Schooling
-                // Defines who can school: Linguiniii, Tetra, Squirrel, Angel
-                if (['Linguiniii', 'Tetra', 'Squirrelfish', 'Angelfish'].includes(key)) {
-                    // Show school checkbox if active
-                    // Actually, let's just show controls.
-                    // If active is unchecked, disable these?
-
-                    const max = key === 'Linguiniii' ? 12 : 4;
-                    const isSchooling = conf.school;
-
-                    html += `
-                    <label style="font-size:12px; display:flex; gap:5px; align-items:center;">
-                        School <input type="checkbox" class="cfg-school" data-fish="${key}" ${conf.school ? 'checked' : ''}>
-                    </label>
-                    `;
-
-                    if (conf.school) {
+                    if (conf.active) {
                         html += `
-                        <input type="range" class="cfg-count" data-fish="${key}" min="1" max="${max}" value="${conf.count}">
-                        <span style="width:20px">${conf.count}</span>
+                        <input type="range" class="hud-slider" data-fish="${key}" min="${conf.min}" max="${conf.max}" value="${conf.count}">
+                        <span class="hud-value" id="val-${key}">${conf.count}</span>
                         `;
                     }
                 }
@@ -803,48 +768,42 @@
                 container.appendChild(row);
             });
 
-            // Bind Events
-            container.querySelectorAll('.cfg-active').forEach(el => {
+            // Bind Events (Real-time updates)
+
+            // Checkboxes
+            container.querySelectorAll('.hud-check').forEach(el => {
                 el.onchange = (e) => {
                     fishConfig[e.target.dataset.fish].active = e.target.checked;
-                    renderManager(); // Re-render to show/hide options
+                    renderHUD(); // Re-render to show/hide slider
+                    clearTank(); populateTank();
                 };
             });
-            container.querySelectorAll('.cfg-school').forEach(el => {
+
+            // Selects (Ronan only now)
+            container.querySelectorAll('.hud-select').forEach(el => {
                 el.onchange = (e) => {
-                    fishConfig[e.target.dataset.fish].school = e.target.checked;
-                    renderManager();
+                    const fish = e.target.dataset.fish;
+                    if (fish === 'Ronan') fishConfig[fish].scale = e.target.value;
+                    clearTank(); populateTank();
                 };
             });
-            container.querySelectorAll('.cfg-count').forEach(el => {
+
+            // Sliders
+            container.querySelectorAll('.hud-slider').forEach(el => {
                 el.oninput = (e) => {
-                    fishConfig[e.target.dataset.fish].count = parseInt(e.target.value);
-                    e.target.nextElementSibling.innerText = e.target.value;
+                    const fish = e.target.dataset.fish;
+                    const val = parseInt(e.target.value);
+                    fishConfig[fish].count = val;
+                    document.getElementById(`val-${fish}`).innerText = val;
                 };
-            });
-            container.querySelectorAll('.cfg-scale').forEach(el => {
                 el.onchange = (e) => {
-                    fishConfig[e.target.dataset.fish].scale = e.target.value;
-                };
+                    // Update physics on release to save performance
+                    clearTank(); populateTank();
+                }
             });
         }
 
-        // Manager Modal Open/Close
-        const mgrBtn = document.getElementById('manageBtn');
-        const mgrWrapper = document.querySelector('.manager-modal-wrapper');
-        const mgrClose = document.getElementById('closeMgr');
-        const applyBtn = document.getElementById('applyManager');
-
-        mgrBtn.onclick = () => {
-            renderManager();
-            mgrWrapper.style.display = 'flex';
-        };
-        mgrClose.onclick = () => mgrWrapper.style.display = 'none';
-        applyBtn.onclick = () => {
-            clearTank();
-            populateTank();
-            mgrWrapper.style.display = 'none';
-        };
+        renderHUD();
 
         const dirBtn = document.getElementById('directoryBtn');
         const dirModal = document.getElementById('directoryModal');
@@ -886,11 +845,13 @@
         }
 
         // Open/Close Logic
-        dirBtn.onclick = () => {
-            dirModal.style.display = 'flex';
-            if (document.getElementById('bioName').innerText === 'Select a Fish') showBio('Sasha Scuba');
-        };
-        closeDir.onclick = () => dirModal.style.display = 'none'; // Updated var
+        if (dirBtn) {
+            dirBtn.onclick = () => {
+                dirModal.style.display = 'flex';
+                if (document.getElementById('bioName').innerText === 'Select a Fish') showBio('Sasha Scuba');
+            };
+        }
+        if (closeDir) closeDir.onclick = () => dirModal.style.display = 'none';
         window.onclick = (e) => {
             if (e.target == dirModal) dirModal.style.display = 'none';
         };
@@ -905,11 +866,12 @@
             isPartyMode = !isPartyMode;
 
             if (isPartyMode) {
-                btn.innerText = "🛑 Chill Mode";
+                btn.innerText = "CHILL MODE"; // Removed emoji
                 btn.style.background = "rgba(255, 0, 100, 1.0)";
                 btn.style.color = "white";
                 scene.fog = new THREE.Fog(0x220033, 10, 40);
                 raveGroup.visible = true;
+                // ... (rest is same)
 
                 const allFish = [...fishSchool, ...raveSquad];
                 allFish.forEach(fish => {
@@ -927,7 +889,7 @@
                 });
 
             } else {
-                btn.innerText = "🪩 Party Mode";
+                btn.innerText = "PARTY MODE"; // Removed emoji
                 btn.style.background = "rgba(255, 255, 255, 0.9)";
                 btn.style.color = "#333";
                 document.body.style.filter = "none";
