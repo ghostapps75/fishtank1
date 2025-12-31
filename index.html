@@ -64,6 +64,209 @@
             user-select: none;
             -webkit-tap-highlight-color: transparent;
         }
+
+        /* FISH DIRECTORY UI */
+        #directoryBtn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            /* Left side to balance Party Mode */
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 30px;
+            color: white;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            cursor: pointer;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        #directoryBtn:hover {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(1.05);
+        }
+
+        #directoryModal {
+            display: none;
+            /* Hidden by default */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: rgba(20, 20, 30, 0.9);
+            width: 800px;
+            max-width: 90%;
+            height: 500px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            font-family: 'Inter', sans-serif;
+            color: white;
+            position: relative;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 24px;
+            cursor: pointer;
+            color: rgba(255, 255, 255, 0.5);
+            z-index: 10;
+        }
+
+        .close-btn:hover {
+            color: white;
+        }
+
+        /* Directory List (Left) */
+        .fish-list {
+            width: 35%;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            overflow-y: auto;
+        }
+
+        .fish-item {
+            padding: 15px;
+            margin-bottom: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .fish-item:hover,
+        .fish-item.active {
+            background: rgba(64, 224, 208, 0.2);
+            /* Turquoise tint */
+            border: 1px solid rgba(64, 224, 208, 0.4);
+        }
+
+        .fish-icon {
+            font-size: 20px;
+        }
+
+        /* Bio Card (Right) */
+        .fish-bio-panel {
+            width: 65%;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            background: linear-gradient(135deg, rgba(20, 20, 30, 0) 0%, rgba(0, 0, 0, 0.4) 100%);
+        }
+
+        .bio-image-placeholder {
+            width: 180px;
+            height: 180px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            margin-bottom: 20px;
+            object-fit: cover;
+            /* Ensure image covers the circle */
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 0 30px rgba(64, 224, 208, 0.3);
+        }
+
+        .bio-name {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 5px;
+            color: #40e0d0;
+        }
+
+        .bio-species {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.6);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+        }
+
+        .bio-stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px 30px;
+            border-radius: 12px;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .stat-value {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .bio-text {
+            font-size: 16px;
+            line-height: 1.6;
+            color: rgba(255, 255, 255, 0.9);
+            max-width: 80%;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                flex-direction: column;
+                height: 90%;
+            }
+
+            .fish-list {
+                width: 100%;
+                height: 30%;
+                border-right: none;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                display: flex;
+                overflow-x: auto;
+                padding: 10px;
+                gap: 10px;
+            }
+
+            .fish-item {
+                width: 140px;
+                flex-shrink: 0;
+                flex-direction: column;
+                justify-content: center;
+                text-align: center;
+            }
+
+            .fish-bio-panel {
+                width: 100%;
+                height: 70%;
+                padding: 20px;
+                overflow-y: auto;
+            }
+        }
     </style>
     <script type="importmap">
         {
@@ -78,7 +281,33 @@
 <body>
     <div id="tint-layer"></div>
 
+    <button id="directoryBtn">📖 Fish Guide</button>
     <button id="partyBtn">🪩 Party Mode</button>
+
+    <!-- Fish Directory Modal -->
+    <div id="directoryModal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+
+            <div class="fish-list" id="fishList">
+                <!-- Populated by JS -->
+            </div>
+
+            <div class="fish-bio-panel">
+                <img class="bio-image-placeholder" id="bioImage" src="assets/sasha-bio.png" alt="Fish Portrait">
+                <div class="bio-name" id="bioName">Select a Fish</div>
+                <div class="bio-species" id="bioSpecies">Welcome to the Tank</div>
+
+                <div class="bio-stats" id="bioStats" style="display:none;">
+                    <!-- Stats go here -->
+                </div>
+
+                <div class="bio-text" id="bioText">
+                    Click on a name from the list on the left to learn more about our aquatic friends!
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script type="module">
         import * as THREE from 'three';
@@ -287,6 +516,115 @@
         for (let i = 0; i < 5; i++) {
             addFish('squirrelfish.glb', 1.2 + Math.random() * 0.4, 0.2 + Math.random() * 0.1, Math.random() * 10, (Math.random() - 0.5) * 5, true);
         }
+
+        // ============================================
+        // 📖 FISH DIRECTORY DATA & LOGIC
+        // ============================================
+        const fishBios = {
+            "Sasha Scuba": {
+                species: "Homo Sapiens Aquaticus",
+                icon: "🤿",
+                image: "assets/sasha-bio-v2.png",
+                stats: { "Dives Logged": "400+", "Cert Level": "Divemaster", "Role": "Hero" },
+                bio: "Sasha is a PADI certified divemaster with over 400 dives logged. She keeps the peace in the tank and ensures all the fish stay in formation. She's the only one who knows how to operate the filter."
+            },
+            "Linguiniii": {
+                species: "Canadian Maple Fish",
+                icon: "🍁",
+                image: "assets/linguiniii-bio.png",
+                stats: { "Material": "Soft Fabric", "Origin": "Canada", "Cuteness": "100%" },
+                bio: "Linguiniii is a rare Canadian Maple Fish, made entirely of soft fabric. Despite being a bean bag, he's an excellent swimmer. He is red all the way around and incredibly polite."
+            },
+            "Ronan": {
+                species: "Hippocampus Executive",
+                icon: "👔",
+                image: "assets/ronan-bio-v2.png",
+                stats: { "Attire": "Business Casual", "Vision": "Corrected", "Stress": "Low" },
+                bio: "Ronan is a seahorse who means business. Dressed in a navy cardigan and khakis, he brings a level of professionalism to the reef that is frankly unnecessary. He enjoys reading financial reports on waterproof paper."
+            },
+            "Shark": {
+                species: "Selachimorpha",
+                icon: "🦈",
+                image: "assets/shark-bio.png",
+                stats: { "Speed": "Fast", "Teeth": "Many", "Vibe": "Misunderstood" },
+                bio: "The tank's resident muscle. He looks tough, but mostly he just circles around looking for snacks. He's actually quite friendly if you don't make sudden movements."
+            },
+            "Manta": {
+                species: "Mobula alfredi",
+                icon: "🪁",
+                image: "assets/manta-bio.png",
+                stats: { "Wingspan": "Impressive", "Gliding": "10/10", "Grace": "High" },
+                bio: "The Manta Ray is the glider of the group. She prefers the wide open spaces of the upper tank and dreams of the open ocean."
+            },
+            "Tetra": {
+                species: "Paracheirodon",
+                icon: "🐟",
+                image: "assets/tetra-bio.png",
+                stats: { "Count": "Many", "Size": "Small", "Schooling": "Yes" },
+                bio: "The Tetras are the background dancers of the aquarium. They move as one and add a splash of neon color to the scene."
+            },
+            "Squirrelfish": {
+                species: "Holocentridae",
+                icon: "🐠",
+                image: "assets/squirrelfish-bio.png",
+                stats: { "Eyes": "Huge", "Color": "Red", "Night Vision": "Yes" },
+                bio: "With their giant eyes, the Squirrelfish see everything. They are excellent at finding food in low light and judging the other fish silently."
+            },
+            "Angelfish": {
+                species: "Pterophyllum",
+                icon: "👼",
+                image: "assets/angelfish-bio.png",
+                stats: { "Shape": "Triangle", "Elegance": "Maximum", "Attitude": "Royalty" },
+                bio: "The Angelfish believe they own the tank. They swim with a regal slow-motion energy that suggests they are better than everyone else."
+            }
+        };
+
+        const dirBtn = document.getElementById('directoryBtn');
+        const dirModal = document.getElementById('directoryModal');
+        const closeBtn = document.querySelector('.close-btn');
+        const fishList = document.getElementById('fishList');
+
+        // Populate List
+        Object.keys(fishBios).forEach(name => {
+            const item = document.createElement('div');
+            item.className = 'fish-item';
+            item.innerHTML = `<span class="fish-icon">${fishBios[name].icon}</span> ${name}`;
+            item.onclick = function () {
+                showBio(name);
+                document.querySelectorAll('.fish-item').forEach(el => el.classList.remove('active'));
+                this.classList.add('active');
+            };
+            fishList.appendChild(item);
+        });
+
+        function showBio(name) {
+            const data = fishBios[name];
+            document.getElementById('bioImage').src = data.image; // Update Image Source
+            document.getElementById('bioName').innerText = name;
+            document.getElementById('bioSpecies').innerText = data.species;
+            document.getElementById('bioText').innerText = data.bio;
+
+            const statsContainer = document.getElementById('bioStats');
+            statsContainer.style.display = 'flex';
+            statsContainer.innerHTML = '';
+
+            for (const [key, value] of Object.entries(data.stats)) {
+                const div = document.createElement('div');
+                div.className = 'stat-item';
+                div.innerHTML = `<span class="stat-label">${key}</span><span class="stat-value">${value}</span>`;
+                statsContainer.appendChild(div);
+            }
+        }
+
+        // Open/Close Logic
+        dirBtn.onclick = () => {
+            dirModal.style.display = 'flex';
+            if (document.getElementById('bioName').innerText === 'Select a Fish') showBio('Sasha Scuba');
+        };
+        closeBtn.onclick = () => dirModal.style.display = 'none';
+        window.onclick = (e) => {
+            if (e.target == dirModal) dirModal.style.display = 'none';
+        };
 
         // ============================================
         // 🎛️ MODE SWITCHING
