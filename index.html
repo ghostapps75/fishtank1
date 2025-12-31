@@ -85,18 +85,19 @@
             position: relative;
         }
 
-        .close-btn {
-            position: absolute;
-            top: 15px;
-            right: 20px;
-            font-size: 24px;
-            cursor: pointer;
-            color: rgba(255, 255, 255, 0.5);
-            z-index: 10;
-        }
-
-        .close-btn:hover {
+        /* Explicit Close Button (Mobile Only) */
+        #closeGuideBtn {
+            display: none;
+            /* Hidden on desktop */
+            margin-top: 20px;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.4);
             color: white;
+            border-radius: 20px;
+            cursor: pointer;
+            font-family: 'Poppins', sans-serif;
+            font-size: 14px;
         }
 
         /* Directory List (Left) */
@@ -287,6 +288,11 @@
                 overflow-y: auto;
             }
 
+            #closeGuideBtn {
+                display: block;
+                /* Show on mobile */
+            }
+
             /* Mobile: Tiny scaling */
             #directoryBtn,
             #partyBtn,
@@ -444,6 +450,8 @@
                 <div class="bio-text" id="bioText">
                     Click on a name from the list on the left to learn more about our aquatic friends!
                 </div>
+
+                <button id="closeGuideBtn">Close Guide</button>
             </div>
         </div>
     </div>
@@ -915,6 +923,15 @@
                 dirModal.style.display = 'flex';
                 if (document.getElementById('bioName').innerText === 'Select a Fish') showBio('Sasha Scuba');
             };
+        }
+
+        // Explicit Close Button Logic
+        const closeGuideBtn = document.getElementById('closeGuideBtn');
+        if (closeGuideBtn) {
+            closeGuideBtn.onclick = (e) => {
+                e.stopPropagation();
+                dirModal.style.display = 'none';
+            }
         }
 
         // Removed closeDir click listener (No X button)
