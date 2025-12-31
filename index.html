@@ -203,6 +203,16 @@
             margin-bottom: 20px;
         }
 
+        #partyBtn {
+            bottom: 80px;
+            left: 20px;
+        }
+
+        #tankControlsBtn {
+            bottom: 140px;
+            left: 20px;
+        }
+
         .bio-stats {
             display: flex;
             gap: 20px;
@@ -268,24 +278,30 @@
             }
         }
 
-        /* --- TANK HUD --- */
+        /* HUD Overlay (Hidden by Default) */
         #tankHUD {
             position: fixed;
-            top: 90px;
-            right: 20px;
-            width: 250px;
-            background: rgba(0, 30, 54, 0.6);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            top: 20px;
+            right: -320px;
+            /* Hidden off-screen */
+            width: 280px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px;
             border-radius: 12px;
-            padding: 15px;
-            z-index: 1000;
             color: white;
-            font-family: 'Inter', sans-serif;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            font-family: 'Poppins', sans-serif;
+            z-index: 1000;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: right 0.3s ease-in-out;
             max-height: 80vh;
             overflow-y: auto;
-            transition: opacity 0.3s;
+        }
+
+        #tankHUD.visible {
+            right: 20px;
+            /* Slide in */
         }
 
         .hud-header {
@@ -369,6 +385,7 @@
 
     <button id="directoryBtn">📖 Fish Guide</button>
     <button id="partyBtn">🪩 Party Mode</button>
+    <button id="tankControlsBtn">⚙️ Tank Controls</button>
 
     <!-- Fish Directory Modal -->
     <div id="directoryModal">
@@ -467,6 +484,16 @@
         createSpotLight(0xff00ff, -10, 10);
         createSpotLight(0x00ffff, 10, 10);
         createSpotLight(0xffff00, 0, -10);
+
+        // ============================================
+        // ⚙️ TANK CONTROLS TOGGLE
+        // ============================================
+        const tankControlsBtn = document.getElementById('tankControlsBtn');
+        const tankHUD = document.getElementById('tankHUD');
+
+        tankControlsBtn.onclick = () => {
+            tankHUD.classList.toggle('visible');
+        };
 
         // --- MATERIALS ---
         const raveMaterial = new THREE.MeshPhysicalMaterial({
